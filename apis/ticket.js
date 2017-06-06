@@ -101,6 +101,73 @@ authRouter.post('/new', async (req, res) =>
     }
 });
 
+authRouter.post('/status', async (req, res) =>
+{
+    let tid = req.body.tid;
+
+    try
+    {
+        let ticket = await tickets.findOne({ "tid": tid }).exec();
+
+        if (req.user.type === "user" && ticket.author !== req.user.mid)
+            throw new Error(`User ${req.user.mid} trying to change status of ticket he didn't own`);
+
+        if (req.user.type === "support" && ticket.assignee !== req.user.mid)
+            throw new Error(`Support user ${req.user.mid} trying to change status of ticket not assigned to self`);
+
+        ticket.status = req.body.status;
+        await ticket.save();
+
+        res.json({
+            "success": true,
+            "message": `Status of ticket ${tid} changed to ${req.body.status}`
+        });
+    }
+    catch (err)
+    {
+        console.error(err);
+        res.json({
+            "success": false,
+            "message": "Failed to change the status"
+        });
+    }
+});
+
+authRouter.post('/assign', async (req, res) =>
+{
+    let tid = req.body.tid;
+    let mid = req.body.mid;
+
+    try
+    {
+        let assignee = await users.findOne({ "mid": mid }).exec();
+
+        if (req.user.type !== "admin" && req.user.mid !== mid)
+            throw new Error("User not authorized enough to assign others");
+
+        if (assignee.type === "user")
+            throw new Error("Normal users cannot be assigned to tickets");
+
+        let ticket = await tickets.findOne({ "tid": tid }).exec();
+
+        ticket.assignee = mid;
+        await ticket.save();
+
+        res.json({
+            "success": true,
+            "message": "Assignee changed successfully"
+        });
+    }
+    catch (err)
+    {
+        console.error(err);
+        res.json({
+            "success": false,
+            "message": `Failed to assign ticket ${tid} to user ${mid}`
+        });
+    }
+});
+
 authRouter.post('/my',    (req, res) => ticketsFindHandler({ "author": req.user.mid }, res));
 openRouter.get('/all',    (req, res) => ticketsFindHandler({}, res));
 openRouter.get('/open',   (req, res) => ticketsFindHandler({ "status": "open" }, res));
@@ -139,8 +206,10 @@ openRouter.get('/:tid', async (req, res) =>
             "ipAddress": ticket.ipAddress,
 
             "status": ticket.status,
-            "assignee": (ticket.assigneeRef || { "name": "Unassigned" }).name,
-            "author": ticket.authorRef.name,
+            "assignee": (ticket.assigneeRef || { "mid": "-1" }).mid,
+            "assigneeName": (ticket.assigneeRef || { "name": "Unassigned" }).name,
+            "author": ticket.authorRef.mid,
+            "authorName": ticket.authorRef.name,
 
             "replies": data.map(reply => ({
                 "rid": reply.rid,

@@ -79,12 +79,35 @@
                         </div>
                         <div class="row">
                             <div class="col s12">
-                                <strong>Status</strong>: <span ng-bind="ticket.status"></span>
+                                <strong>Status</strong>: <span class="capitalize" ng-bind="ticket.status"
+                                    ng-hide="canChangeStatus"></span>
+                                <form ng-show="canChangeStatus">
+                                    <div class="input-field">
+                                        <select ng-model="ticket.status"
+                                                ng-change="status(ticket.status)">
+                                            <option value="" disabled selected>Choose your option</option>
+                                            <option value="open" ng-selected="{{ ticket.status == 'open' }}">Open</option>
+                                            <option value="closed" ng-selected="{{ ticket.status == 'closed' }}">Closed</option>
+                                        </select>
+                                    </div>
+                                </form>
                             </div>
                         </div>
                         <div class="row">
                             <div class="col s12">
-                                <strong>Assignee</strong>: <span ng-bind="ticket.assignee"></span>
+                                <strong>Assignee</strong>:
+                                <span ng-bind="ticket.assigneeName" ng-hide="supportTeam"></span>
+                                <form ng-show="supportTeam">
+                                    <div class="input-field">
+                                        <select ng-model="ticket.assignee"
+                                                ng-change="assign(ticket.assignee)">
+                                            <option value="" disabled selected>Choose your option</option>
+                                            <option ng-selected="{{ supporter.mid == ticket.assignee }}"
+                                                    ng-repeat="supporter in supportTeam"
+                                                    value="{{ supporter.mid }}">{{ supporter.name }}</option>
+                                        </select>
+                                    </div>
+                                </form>
                             </div>
                         </div>
                     </div>
@@ -93,3 +116,7 @@
         </div>
     </div>
 </div>
+
+<script>
+    $(() => $('select').material_select());
+</script>
