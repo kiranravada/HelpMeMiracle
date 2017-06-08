@@ -53,14 +53,10 @@ authRouter.post('/new', async (req, res) =>
 
     try
     {
-        let tone = await toneAnalyzer.analyzeTone(message);
+        let [sentiment1, sentiment2] = await toneAnalyzer.analyzeTone(message);
 
-        let sadness = tone.sadness;
-        let anger = tone.anger;
-        let disgust = tone.disgust;
-
-        let avg = (sadness + anger + disgust) / 3.0;
-        let priority = Math.max(avg * 5, 1);
+        let average = (sentiment1 + sentiment2) / 2.0;
+        let priority = Math.round(Math.max(Math.abs(average) * 5, 1), 1);
 
         let ticket = {
             "priority": priority,
@@ -202,7 +198,18 @@ authRouter.post('/assign', async (req, res) =>
     }
 });
 
-authRouter.post('/my',    (req, res) => ticketsFindHandler({ "author": req.user.mid }, res));
+authRouter.post('/my', (req, res) =>
+{
+    if (req.user.type === "user")
+        ticketsFindHandler({ "author": req.user.mid }, res);
+    else if (req.user.type == "support")
+        ticketsFindHandler({ "assignee": req.user.mid }, res);
+    else
+        res.json({
+            "success": false,
+            "message": "Admin will never have his tickets"
+        });
+});
 openRouter.get('/all',    (req, res) => ticketsFindHandler({}, res));
 openRouter.get('/open',   (req, res) => ticketsFindHandler({ "status": "open" }, res));
 openRouter.get('/closed', (req, res) => ticketsFindHandler({ "status": "closed" }, res));
